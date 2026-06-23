@@ -1,0 +1,173 @@
+import React, { createContext, useContext, useMemo, useState } from 'react'
+
+type Lang = 'en' | 'uk'
+type Dict = Record<string, string>
+
+const dictionaries: Record<Lang, Dict> = {
+  en: {
+    appTitle: 'Survey Bot Admin',
+    dashboard: 'Dashboard',
+    surveys: 'Surveys',
+    respondents: 'Respondents',
+    responses: 'Responses',
+    analytics: 'Analytics',
+    logout: 'Logout',
+    language: 'Language',
+    english: 'English',
+    ukrainian: 'Українська',
+    adminLogin: 'Admin Login',
+    loginSubtitle: 'Survey Bot management panel',
+    email: 'Email',
+    password: 'Password',
+    signIn: 'Sign in',
+    invalidLogin: 'Invalid email or password',
+    newSurvey: 'New survey',
+    title: 'Title',
+    status: 'Status',
+    questions: 'Questions',
+    question: 'Question',
+    questionType: 'Type',
+    required: 'Required',
+    optionsOnePerLine: 'Options, one per line',
+    addQuestion: 'Add question',
+    remove: 'Remove',
+    saveSurvey: 'Save survey',
+    translateToUk: 'Translate to UA',
+    translateToEn: 'Translate to EN',
+    translateAllToUk: 'Translate whole survey to UA',
+    translateAllToEn: 'Translate whole survey to EN',
+    translate: 'Translate',
+    translating: 'Translating...',
+    changesSaved: 'Changes saved successfully.',
+    createSurvey: 'Create survey',
+    editSurvey: 'Edit survey',
+    description: 'Description',
+    draft: 'draft',
+    active: 'active',
+    closed: 'closed',
+    singleChoice: 'single choice',
+    multipleChoice: 'multiple choice',
+    freeText: 'free text',
+    scale: 'scale',
+    min: 'Min',
+    max: 'Max',
+    edit: 'Edit',
+    deleteSurveyConfirm: 'Delete survey?',
+    csv: 'CSV',
+    excel: 'Excel',
+    telegramId: 'Telegram ID',
+    username: 'Username',
+    name: 'Name',
+    sessions: 'Sessions',
+    allSurveys: 'All surveys',
+    session: 'Session',
+    answer: 'Answer',
+    date: 'Date',
+    completed: 'Completed',
+    in_progress: 'In progress',
+    unfinished: 'Unfinished',
+    activeSurveys: 'Active surveys',
+    sessionsByStatus: 'Sessions by status',
+    recentSessions: 'Recent sessions',
+    loading: 'Loading...',
+    answers: 'answers',
+    average: 'avg',
+  },
+  uk: {
+    appTitle: 'Адмін-панель Survey Bot',
+    dashboard: 'Панель',
+    surveys: 'Опитування',
+    respondents: 'Респонденти',
+    responses: 'Відповіді',
+    analytics: 'Аналітика',
+    logout: 'Вийти',
+    language: 'Мова',
+    english: 'English',
+    ukrainian: 'Українська',
+    adminLogin: 'Вхід адміністратора',
+    loginSubtitle: 'Панель керування системою опитувань',
+    email: 'Email',
+    password: 'Пароль',
+    signIn: 'Увійти',
+    invalidLogin: 'Неправильний email або пароль',
+    newSurvey: 'Нове опитування',
+    title: 'Назва',
+    status: 'Статус',
+    questions: 'Питання',
+    question: 'Питання',
+    questionType: 'Тип',
+    required: "Обов'язкове",
+    optionsOnePerLine: 'Варіанти, кожен з нового рядка',
+    addQuestion: 'Додати питання',
+    remove: 'Видалити',
+    saveSurvey: 'Зберегти опитування',
+    translateToUk: 'Перекласти UA',
+    translateToEn: 'Перекласти EN',
+    translateAllToUk: 'Перекласти все опитування UA',
+    translateAllToEn: 'Перекласти все опитування EN',
+    translate: 'Перекласти',
+    translating: 'Переклад...',
+    changesSaved: 'Зміни успішно збережено.',
+    createSurvey: 'Створити опитування',
+    editSurvey: 'Редагувати опитування',
+    description: 'Опис',
+    draft: 'чернетка',
+    active: 'активне',
+    closed: 'закрите',
+    singleChoice: 'один варіант',
+    multipleChoice: 'кілька варіантів',
+    freeText: 'вільний текст',
+    scale: 'шкала',
+    min: 'Мін.',
+    max: 'Макс.',
+    edit: 'Редагувати',
+    deleteSurveyConfirm: 'Видалити опитування?',
+    csv: 'CSV',
+    excel: 'Excel',
+    telegramId: 'Telegram ID',
+    username: "Ім'я користувача",
+    name: "Ім'я",
+    sessions: 'Проходження',
+    allSurveys: 'Усі опитування',
+    session: 'Сесія',
+    answer: 'Відповідь',
+    date: 'Дата',
+    completed: 'Завершені',
+    in_progress: 'У процесі',
+    unfinished: 'Незавершені',
+    activeSurveys: 'Активні опитування',
+    sessionsByStatus: 'Проходження за статусом',
+    recentSessions: 'Останні проходження',
+    loading: 'Завантаження...',
+    answers: 'відповідей',
+    average: 'сер.',
+  }
+}
+
+type I18nContextValue = {
+  lang: Lang
+  setLang: (lang: Lang) => void
+  t: (key: string) => string
+}
+
+const I18nContext = createContext<I18nContextValue | null>(null)
+
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem('lang') === 'uk' ? 'uk' : 'en'))
+  const value = useMemo(() => ({
+    lang,
+    setLang: (next: Lang) => {
+      localStorage.setItem('lang', next)
+      setLangState(next)
+    },
+    t: (key: string) => dictionaries[lang][key] || key
+  }), [lang])
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
+}
+
+export function useI18n() {
+  const context = useContext(I18nContext)
+  if (!context) throw new Error('useI18n must be used inside I18nProvider')
+  return context
+}
