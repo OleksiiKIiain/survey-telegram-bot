@@ -7,7 +7,13 @@ import { AnalyticsOverview } from '../types'
 export default function Dashboard() {
   const { lang, t } = useI18n()
   const [data, setData] = useState<AnalyticsOverview | null>(null)
-  useEffect(() => { api.get('/analytics/overview').then(r => setData(r.data)) }, [])
+  const [error, setError] = useState('')
+  useEffect(() => {
+    api.get('/analytics/overview')
+      .then(r => setData(r.data))
+      .catch(() => setError(t('loadingError')))
+  }, [t])
+  if (error) return <div className="panel text-red-700">{error}</div>
   if (!data) return <div>{t('loading')}</div>
   const sessionTitle = (session: AnalyticsOverview['recent_sessions'][number]) => (
     lang === 'uk' ? session.survey_title_uk || session.survey_title : session.survey_title_en || session.survey_title

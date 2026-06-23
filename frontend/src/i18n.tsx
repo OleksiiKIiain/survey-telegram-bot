@@ -70,6 +70,7 @@ const dictionaries: Record<Lang, Dict> = {
     sessionsByStatus: 'Sessions by status',
     recentSessions: 'Recent sessions',
     loading: 'Loading...',
+    loadingError: 'Could not load data. Please sign in again.',
     answers: 'answers',
     average: 'avg',
   },
@@ -139,6 +140,7 @@ const dictionaries: Record<Lang, Dict> = {
     sessionsByStatus: 'Проходження за статусом',
     recentSessions: 'Останні проходження',
     loading: 'Завантаження...',
+    loadingError: 'Не вдалося завантажити дані. Увійдіть ще раз.',
     answers: 'відповідей',
     average: 'сер.',
   }
