@@ -16,6 +16,10 @@ class OptionCreate(OptionBase):
     pass
 
 
+class OptionUpdate(OptionBase):
+    id: int | None = Field(default=None, gt=0)
+
+
 class OptionRead(OptionBase):
     id: int
 
@@ -35,8 +39,8 @@ class QuestionBase(BaseModel):
     @model_validator(mode="after")
     def validate_scale(self):
         if self.type == QuestionType.scale:
-            self.scale_min = self.scale_min or 1
-            self.scale_max = self.scale_max or 5
+            self.scale_min = 1 if self.scale_min is None else self.scale_min
+            self.scale_max = 5 if self.scale_max is None else self.scale_max
             if self.scale_min >= self.scale_max:
                 raise ValueError("scale_min must be less than scale_max")
         return self
@@ -55,7 +59,7 @@ class QuestionUpdate(BaseModel):
     position: int | None = None
     scale_min: int | None = None
     scale_max: int | None = None
-    options: list[OptionCreate] | None = None
+    options: list[OptionUpdate] | None = None
 
 
 class QuestionRead(QuestionBase):

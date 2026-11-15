@@ -24,7 +24,7 @@ def build_analytics(db: Session, survey_id: int | None = None, date_from: dateti
     if date_to:
         session_filters.append(SurveySession.started_at <= date_to)
 
-    total_respondents = db.scalar(select(func.count(TelegramUser.id))) or 0
+    total_respondents = db.scalar(select(func.count(func.distinct(SurveySession.respondent_id))).where(*session_filters)) or 0
     total_sessions = db.scalar(select(func.count(SurveySession.id)).where(*session_filters)) or 0
     completed_sessions = db.scalar(select(func.count(SurveySession.id)).where(SurveySession.status == "completed", *session_filters)) or 0
     active_surveys = db.scalar(select(func.count(Survey.id)).where(Survey.status == "active")) or 0
@@ -68,7 +68,7 @@ def build_analytics(db: Session, survey_id: int | None = None, date_from: dateti
         elif question.type == "scale":
             values = [answer.number_value for answer in answers if answer.number_value is not None]
             stat.average = round(sum(values) / len(values), 2) if values else None
-            stat.distribution = [{"name": str(value), "value": values.count(value)} for value in range(question.scale_min or 1, (question.scale_max or 5) + 1)]
+            stat.distribution = [{"name": str(value), "value": values.count(value)} for value in range(1 if question.scale_min is None else question.scale_min, (5 if question.scale_max is None else question.scale_max) + 1)]
         else:
             stat.text_answers = [answer.text_value for answer in answers if answer.text_value][:20]
         question_stats.append(stat)

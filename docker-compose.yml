@@ -6,8 +6,8 @@ services:
       POSTGRES_DB: survey_bot
       POSTGRES_USER: survey_user
       POSTGRES_PASSWORD: survey_password
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,11 +23,17 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://survey_user:survey_password@db:5432/survey_bot
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "alembic upgrade head && python -m app.seed && python -m app.repair_answers && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
 
   bot:
     build: ./bot
@@ -36,7 +42,8 @@ services:
     environment:
       API_BASE_URL: http://backend:8000/api/v1
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -45,7 +52,7 @@ services:
     environment:
       VITE_API_URL: http://localhost:8000/api/v1
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     depends_on:
       - backend
 

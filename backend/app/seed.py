@@ -22,62 +22,7 @@ def seed() -> None:
             db.add(admin)
             db.flush()
 
-        def has_cyrillic(value: str | None) -> bool:
-            return any("А" <= char <= "я" or char in "іїєґІЇЄҐ" for char in (value or ""))
-
         if db.scalar(select(Survey).limit(1)):
-            translations = {
-                "Customer Service Satisfaction": ("Задоволеність клієнтів сервісом", "Демонстраційне опитування для аналізу якості сервісу."),
-                "Student Learning Feedback": ("Відгук студента про навчання", "Опитування про курс з оцінками та текстовими відповідями."),
-                "Internal HR Pulse": ("Внутрішній HR-пульс", "Чернетка опитування для співробітників."),
-            }
-            question_translations = {
-                "How satisfied are you with the service?": "Наскільки ви задоволені сервісом?",
-                "Which channel did you use?": "Яким каналом ви користувалися?",
-                "What should we improve?": "Що нам варто покращити?",
-                "Leave a short comment": "Залиште короткий коментар",
-                "Rate course materials": "Оцініть навчальні матеріали",
-                "Preferred learning format": "Бажаний формат навчання",
-                "Which topics were useful?": "Які теми були корисними?",
-                "Your suggestion": "Ваша пропозиція",
-            }
-            option_translations = {
-                "Website": "Сайт",
-                "Phone": "Телефон",
-                "Office": "Офіс",
-                "Speed": "Швидкість",
-                "Price": "Ціну",
-                "Support": "Підтримку",
-                "Documentation": "Документацію",
-                "Online": "Онлайн",
-                "Offline": "Офлайн",
-                "Hybrid": "Змішаний",
-                "Databases": "Бази даних",
-                "Project management": "Управління проєктом",
-            }
-            for survey in db.scalars(select(Survey)).all():
-                survey.title_en = survey.title_en or survey.title
-                survey.description_en = survey.description_en or survey.description
-                if survey.title in translations:
-                    survey.title_uk, survey.description_uk = translations[survey.title]
-            for item in db.scalars(select(Question)).all():
-                if has_cyrillic(item.text_en) and not item.text_uk:
-                    item.text_uk = item.text_en
-                    item.text_en = None
-                if not item.text_en and not has_cyrillic(item.text):
-                    item.text_en = item.text
-                if item.text in question_translations:
-                    item.text_uk = question_translations[item.text]
-            for item in db.scalars(select(QuestionOption)).all():
-                if has_cyrillic(item.text_en) and not item.text_uk:
-                    item.text_uk = item.text_en
-                    item.text_en = None
-                if not item.text_en and not has_cyrillic(item.text):
-                    item.text_en = item.text
-                if item.text in option_translations:
-                    item.text_uk = option_translations[item.text]
-                elif item.text in {"Telegram", "API", "Frontend"}:
-                    item.text_uk = item.text
             db.commit()
             return
 

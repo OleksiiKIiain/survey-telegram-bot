@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useI18n } from '../i18n'
 import { Question, QuestionType, SurveyStatus } from '../types'
+import { ArrowDown, ArrowUp, Save } from 'lucide-react'
 
 const emptyQuestion = (): Question => ({ text: '', text_en: '', text_uk: '', type: 'free_text', is_required: true, position: 0, scale_min: 1, scale_max: 5, options: [] })
 
@@ -19,6 +20,14 @@ function splitLocalized(base?: string | null, en?: string | null, uk?: string | 
   return { en: enValue, uk: ukValue }
 }
 
+function editorQuestion(question: Question): Question {
+  const pair = splitLocalized(question.text, question.text_en, question.text_uk)
+  return { ...question, text: pair.en, text_en: pair.en, text_uk: pair.uk, options: question.options.map(option => {
+    const localized = splitLocalized(option.text, option.text_en, option.text_uk)
+    return { ...option, text: localized.en, text_en: localized.en, text_uk: localized.uk }
+  }) }
+}
+
 export default function SurveyEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -32,6 +41,8 @@ export default function SurveyEditor() {
   const [translating, setTranslating] = useState(false)
   const [savedMessage, setSavedMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [originalIds, setOriginalIds] = useState<number[]>([])
 
   useEffect(() => {
     if (id) api.get(`/surveys/${id}`).then(r => {
@@ -42,6 +53,7 @@ export default function SurveyEditor() {
       setDescription(descriptionPair.en)
       setDescriptionUk(descriptionPair.uk)
       setStatus(r.data.status)
+      setOriginalIds(r.data.questions.map((q: Question) => q.id))
       setQuestions((r.data.questions || []).map((question: Question) => ({
         ...question,
         text: splitLocalized(question.text, question.text_en, question.text_uk).en,
@@ -60,13 +72,14 @@ export default function SurveyEditor() {
   }
 
   function setOptions(index: number, text: string) {
-    updateQuestion(index, { options: text.split('\n').filter(Boolean).map((item, pos) => ({ text: item, text_en: item, text_uk: questions[index]?.options?.[pos]?.text_uk || '', position: pos })) })
+    updateQuestion(index, { options: text.split('\n').map((item, pos) => ({ ...questions[index]?.options?.[pos], text: item, text_en: item, text_uk: questions[index]?.options?.[pos]?.text_uk || '', position: pos })) })
   }
 
   function setOptionsUk(index: number, text: string) {
     const ukLines = text.split('\n')
     updateQuestion(index, {
-      options: ukLines.filter(Boolean).map((item, pos) => ({
+      options: ukLines.map((item, pos) => ({
+        ...questions[index]?.options?.[pos],
         text: questions[index]?.options?.[pos]?.text || '',
         text_en: questions[index]?.options?.[pos]?.text_en || questions[index]?.options?.[pos]?.text || '',
         text_uk: item,
@@ -116,6 +129,8 @@ export default function SurveyEditor() {
         })
       }
       setQuestions(translatedQuestions)
+    } catch {
+      setErrorMessage(t('translationFailed'))
     } finally {
       setTranslating(false)
     }
@@ -125,6 +140,7 @@ export default function SurveyEditor() {
     event.preventDefault()
     setSavedMessage('')
     setErrorMessage('')
+    setSaving(true)
     const baseTitle = titleUk || title
     const baseDescription = descriptionUk || description
     const normalizedQuestions = questions.map((q, i) => ({
@@ -132,7 +148,7 @@ export default function SurveyEditor() {
       text: q.text_uk || q.text || '',
       text_en: q.text,
       position: i,
-      options: (q.options || []).map((option, pos) => ({
+      options: (q.type === 'single_choice' || q.type === 'multiple_choice' ? q.options || [] : []).filter(option => option.text.trim() || option.text_uk?.trim()).map((option, pos) => ({
         ...option,
         text: option.text_uk || option.text || '',
         text_en: option.text,
@@ -143,11 +159,17 @@ export default function SurveyEditor() {
     try {
       if (id) {
         await api.patch(`/surveys/${id}`, { title: baseTitle, title_en: title, title_uk: titleUk, description: baseDescription, description_en: description, description_uk: descriptionUk, status })
-        for (const [index, question] of normalizedQuestions.entries()) {
+        for (const removedId of originalIds.filter(originalId => !normalizedQuestions.some(q => q.id === originalId))) {
+          await api.delete(`/surveys/${id}/questions/${removedId}`)
+        }
+        for (const question of normalizedQuestions) {
           const payload = question
           if (question.id) await api.patch(`/surveys/${id}/questions/${question.id}`, payload)
           else await api.post(`/surveys/${id}/questions`, payload)
         }
+        const { data } = await api.get(`/surveys/${id}`)
+        setQuestions(data.questions.map(editorQuestion))
+        setOriginalIds(data.questions.map((q: Question) => q.id))
         setSavedMessage(t('changesSaved'))
       } else {
         const payload = { title: baseTitle, title_en: title, title_uk: titleUk, description: baseDescription, description_en: description, description_uk: descriptionUk, status, questions: normalizedQuestions }
@@ -155,7 +177,9 @@ export default function SurveyEditor() {
         navigate(`/surveys/${data.id}`)
       }
     } catch {
-      setErrorMessage('Не вдалося зберегти зміни. Перевірте поля питань і варіантів.')
+      setErrorMessage(t('saveFailed'))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -187,15 +211,21 @@ export default function SurveyEditor() {
               <label className="flex items-end gap-2 text-sm"><input type="checkbox" checked={q.is_required} onChange={e => updateQuestion(index, { is_required: e.target.checked })} /> {t('required')}</label>
             </div>
             {(q.type === 'single_choice' || q.type === 'multiple_choice') && <div className="mt-3 grid gap-3 md:grid-cols-2"><label className="block text-sm font-medium">{t('optionsOnePerLine')} UA<textarea className="input mt-1" value={(q.options || []).map(o => o.text_uk || '').join('\n')} onChange={e => setOptionsUk(index, e.target.value)} /></label><label className="block text-sm font-medium">{t('optionsOnePerLine')} EN<textarea className="input mt-1" value={(q.options || []).map(o => o.text).join('\n')} onChange={e => setOptions(index, e.target.value)} /></label></div>}
-            {q.type === 'scale' && <div className="mt-3 grid gap-3 md:grid-cols-2"><label className="text-sm font-medium">{t('min')}<input className="input mt-1" type="number" value={q.scale_min || 1} onChange={e => updateQuestion(index, { scale_min: Number(e.target.value) })} /></label><label className="text-sm font-medium">{t('max')}<input className="input mt-1" type="number" value={q.scale_max || 5} onChange={e => updateQuestion(index, { scale_max: Number(e.target.value) })} /></label></div>}
+            {q.type === 'scale' && <div className="mt-3 grid gap-3 md:grid-cols-2"><label className="text-sm font-medium">{t('min')}<input className="input mt-1" type="number" value={q.scale_min ?? 1} onChange={e => updateQuestion(index, { scale_min: Number(e.target.value) })} /></label><label className="text-sm font-medium">{t('max')}<input className="input mt-1" type="number" value={q.scale_max ?? 5} onChange={e => updateQuestion(index, { scale_max: Number(e.target.value) })} /></label></div>}
             <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="btn-secondary" title={t('moveUp')} disabled={index === 0 || saving} onClick={() => setQuestions(qs => { const next = [...qs]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next })}><ArrowUp size={16} /></button>
+              <button type="button" className="btn-secondary" title={t('moveDown')} disabled={index === questions.length - 1 || saving} onClick={() => setQuestions(qs => { const next = [...qs]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next })}><ArrowDown size={16} /></button>
               <button type="button" className="btn-secondary" onClick={() => setQuestions(questions.filter((_, i) => i !== index))}>{t('remove')}</button>
             </div>
           </div>
         ))}
         <button type="button" className="btn-secondary w-full" onClick={() => setQuestions([...questions, emptyQuestion()])}>{t('addQuestion')}</button>
       </section>
-      <button className="btn-primary">{t('saveSurvey')}</button>
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t bg-white p-3" aria-live="polite">
+        <button className="btn-primary" disabled={saving || translating}><Save size={16} />{saving ? t('saving') : t('saveSurvey')}</button>
+        {savedMessage && <span role="status" className="text-sm font-medium text-emerald-800">{savedMessage}</span>}
+        {errorMessage && <span role="alert" className="text-sm text-red-700">{errorMessage}</span>}
+      </div>
     </form>
   )
 }

@@ -17,6 +17,11 @@ from app.models.survey_session import SurveySession
 router = APIRouter()
 
 
+def safe_cell(value: str) -> str:
+    # Spreadsheet applications may interpret untrusted text as formulas.
+    return "'" + value if value.lstrip().startswith(("=", "+", "-", "@", "\uff1d", "\uff0b", "\uff0d", "\uff20")) or value.startswith(("\t", "\r", "\n")) else value
+
+
 def answer_value(answer: Answer) -> str:
     if answer.text_value:
         return answer.text_value
@@ -49,7 +54,7 @@ def export_rows(db: Session, survey_id: int) -> list[list[str]]:
         user = answer.session.respondent
         respondent = user.username or f"{user.first_name or ''} {user.last_name or ''}".strip() or str(user.telegram_id)
         rows.append([str(answer.session_id), respondent, answer.question.text, answer_value(answer), answer.created_at.isoformat()])
-    return rows
+    return [[safe_cell(cell) for cell in row] for row in rows]
 
 
 @router.get("/surveys/{survey_id}.csv")

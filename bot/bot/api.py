@@ -1,3 +1,4 @@
+import hashlib
 from typing import Any
 
 import aiohttp
@@ -11,7 +12,8 @@ class ApiClient:
 
     async def request(self, method: str, path: str, **kwargs: Any) -> Any:
         async with aiohttp.ClientSession() as session:
-            async with session.request(method, f"{self.base_url}{path}", **kwargs) as response:
+            headers = {"X-Bot-Key": hashlib.sha256(settings.telegram_bot_token.encode()).hexdigest()}
+            async with session.request(method, f"{self.base_url}{path}", headers=headers, timeout=aiohttp.ClientTimeout(total=20), **kwargs) as response:
                 if response.status >= 400:
                     text = await response.text()
                     raise RuntimeError(f"API error {response.status}: {text}")
@@ -39,6 +41,9 @@ class ApiClient:
 
     async def complete(self, session_id: int) -> dict[str, Any]:
         return await self.request("POST", f"/public/sessions/{session_id}/complete")
+
+    async def cancel(self, session_id: int) -> dict[str, Any]:
+        return await self.request("POST", f"/public/sessions/{session_id}/cancel")
 
 
 api = ApiClient()

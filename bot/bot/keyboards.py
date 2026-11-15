@@ -40,7 +40,7 @@ def multiple_choice_keyboard(question: dict, selected: list[int], done_text: str
 
 
 def scale_keyboard(question: dict) -> InlineKeyboardMarkup:
-    min_value = question.get("scale_min") or 1
-    max_value = question.get("scale_max") or 5
+    min_value = 1 if question.get("scale_min") is None else question["scale_min"]
+    max_value = 5 if question.get("scale_max") is None else question["scale_max"]
     buttons = [InlineKeyboardButton(text=str(value), callback_data=f"scale:{value}") for value in range(min_value, max_value + 1)]
     return InlineKeyboardMarkup(inline_keyboard=[buttons[index:index + 5] for index in range(0, len(buttons), 5)])

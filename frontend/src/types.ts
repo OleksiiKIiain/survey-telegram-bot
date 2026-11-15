@@ -53,7 +53,7 @@ export interface AnalyticsOverview {
     question_type: string
     total_answers: number
     distribution: { name: string; name_en?: string | null; name_uk?: string | null; value: number }[]
-    average?: number
+    average?: number | null
     text_answers: string[]
   }[]
   recent_sessions: {

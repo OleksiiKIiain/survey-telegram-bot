@@ -17,3 +17,4 @@ class QuestionType(StrEnum):
 class SessionStatus(StrEnum):
     in_progress = "in_progress"
     completed = "completed"
+    cancelled = "cancelled"
