@@ -10,9 +10,12 @@
 python scripts/build_thesis.py
 python scripts/qa_thesis.py
 python scripts/check_artifacts.py
+python -m unittest discover -s scripts -p test_artifact_checks.py -v
 ```
 
 Результати: output/thesis/survey_bot_thesis.docx, survey_bot_thesis.pdf, technical_report.docx/pdf, compliance_report.docx/pdf. Цей каталог не комітиться. PDF генерується ReportLab із тих самих структурованих джерел, але не є перевіреною конвертацією DOCX. Word TOC створено як поле, фактичне оновлення потребує сумісного редактора.
+
+artifact_checks.json містить структурні перевірки A4, полів, основного стилю DOCX, полів TOC/PAGE, порядку цитувань, сторінок заголовків PDF і наявності зображень. delivery_manifest.json фіксує розміри та SHA-256 фінальних файлів. Ці перевірки не замінюють візуальний рендеринг DOCX або перевірку академічної доброчесності. Негативні контрольні тести підтверджують виявлення неправильних полів, шрифту та порядку посилань.
 
 ## Докази й обмеження
 
