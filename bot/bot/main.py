@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import SimpleEventIsolation
 from aiogram.types import CallbackQuery, Message
 
 from bot.api import api
@@ -34,6 +35,7 @@ async def ask_current(event: Message | CallbackQuery, state: FSMContext) -> None
     if index >= len(questions):
         await api.complete(data["session_id"])
         await state.clear()
+        await state.update_data(lang=lang)
         await target.answer(tr(lang, "completed"))
         return
 
@@ -55,6 +57,8 @@ async def save_and_next(state: FSMContext, payload: dict, event: Message | Callb
     question = data["survey"]["questions"][data["index"]]
     payload["question_id"] = question["id"]
     await api.save_answer(data["session_id"], payload)
+    if isinstance(event, CallbackQuery):
+        await event.message.edit_reply_markup(reply_markup=None)
     await state.update_data(index=data["index"] + 1)
     await ask_current(event, state)
 
@@ -84,12 +88,19 @@ async def cancel(message: Message, state: FSMContext) -> None:
     if not data.get("session_id"):
         await message.answer(tr(lang, "nothing_to_cancel"))
         return
+    await api.cancel(data["session_id"])
     await state.clear()
+    await state.update_data(lang=lang)
     await message.answer(tr(lang, "cancelled"))
 
 
 @router.callback_query(F.data.startswith("lang:"))
 async def choose_language(callback: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    if data.get("session_id"):
+        await callback.answer()
+        await callback.message.answer(tr(data.get("lang"), "active_session", title=localized(data["survey"], "title", data.get("lang"))))
+        return
     lang = callback.data.split(":", 1)[1]
     await state.update_data(lang=lang)
     await api.upsert_user(callback.from_user)
@@ -199,7 +210,7 @@ async def main() -> None:
         while True:
             await asyncio.sleep(3600)
     bot = Bot(token=settings.telegram_bot_token)
-    dp = Dispatcher()
+    dp = Dispatcher(events_isolation=SimpleEventIsolation())
     dp.include_router(router)
     await dp.start_polling(bot)
 

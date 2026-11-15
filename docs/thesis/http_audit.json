@@ -1,0 +1,175 @@
+{
+  "timestamp_utc": "2026-11-15T12:23:00.572101+00:00",
+  "scope": "Real HTTP + PostgreSQL, no Telegram client E2E",
+  "results": [
+    {
+      "test": "health",
+      "passed": true,
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "test": "admin_without_jwt",
+      "passed": true,
+      "actual": 401,
+      "expected": 401
+    },
+    {
+      "test": "bot_without_key",
+      "passed": true,
+      "actual": 401,
+      "expected": 401
+    },
+    {
+      "test": "invalid_login",
+      "passed": true,
+      "actual": 401,
+      "expected": 401
+    },
+    {
+      "test": "valid_login",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "test": "incomplete_session_rejected",
+      "passed": true,
+      "actual": 422,
+      "expected": 422
+    },
+    {
+      "test": "save_single_choice",
+      "passed": true,
+      "actual": 201,
+      "expected": 201
+    },
+    {
+      "test": "save_multiple_choice",
+      "passed": true,
+      "actual": 201,
+      "expected": 201
+    },
+    {
+      "test": "save_free_text",
+      "passed": true,
+      "actual": 201,
+      "expected": 201
+    },
+    {
+      "test": "save_scale",
+      "passed": true,
+      "actual": 201,
+      "expected": 201
+    },
+    {
+      "test": "complete",
+      "passed": true,
+      "actual": "completed",
+      "expected": "completed"
+    },
+    {
+      "test": "completed_session_is_immutable",
+      "passed": true,
+      "actual": 400,
+      "expected": 400
+    },
+    {
+      "test": "preserve_option_ids",
+      "passed": true,
+      "actual": [
+        44,
+        45
+      ],
+      "expected": [
+        44,
+        45
+      ]
+    },
+    {
+      "test": "translation_persists",
+      "passed": true,
+      "actual": "Edited choice",
+      "expected": "Edited choice"
+    },
+    {
+      "test": "analytics_completed",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "test": "analytics_scale_zero",
+      "passed": true,
+      "actual": 0.0,
+      "expected": 0.0
+    },
+    {
+      "test": "analytics_single_count",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "test": "analytics_multiple_count",
+      "passed": true,
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "test": "csv_rows",
+      "passed": true,
+      "actual": 5,
+      "expected": 5
+    },
+    {
+      "test": "csv_formula_escaped",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "test": "xlsx_rows",
+      "passed": true,
+      "actual": 5,
+      "expected": 5
+    },
+    {
+      "test": "xlsx_no_formulas",
+      "passed": true,
+      "actual": false,
+      "expected": false
+    },
+    {
+      "test": "cancel",
+      "passed": true,
+      "actual": "cancelled",
+      "expected": "cancelled"
+    },
+    {
+      "test": "cancelled_complete_rejected",
+      "passed": true,
+      "actual": 409,
+      "expected": 409
+    },
+    {
+      "test": "delete_test_survey",
+      "passed": true,
+      "actual": 204,
+      "expected": 204
+    }
+  ],
+  "translation": {
+    "http_status": 503
+  },
+  "load": {
+    "requests": 80,
+    "workers": 8,
+    "errors": 0,
+    "elapsed_seconds": 0.892,
+    "median_ms": 87.48,
+    "p95_ms": 102.96,
+    "throughput_rps": 89.72,
+    "scope": "HTTP analytics on a small isolated dataset, not a production capacity benchmark"
+  }
+}

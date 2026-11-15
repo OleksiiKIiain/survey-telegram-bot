@@ -13,23 +13,12 @@ def repair_answer_options() -> None:
         for question in questions:
             options = sorted(question.options, key=lambda option: option.position)
             answers = db.scalars(select(Answer).where(Answer.question_id == question.id)).all()
-            for index, answer in enumerate(answers):
-                if question.type == "single_choice" and options:
-                    replacement = options[index % len(options)]
-                    if not answer.option_id or not any(option.id == answer.option_id for option in options):
-                        answer.option_id = replacement.id
-                        repaired += 1
-                if question.type == "multiple_choice" and answer.option_ids:
-                    valid_ids = {option.id for option in options}
-                    if any(option_id not in valid_ids for option_id in answer.option_ids):
-                        answer.option_ids = [option.id for option in options[: len(answer.option_ids)]]
-                        repaired += 1
-                elif question.type == "multiple_choice" and not answer.option_ids and options:
-                    replacement_count = min(2, len(options))
-                    answer.option_ids = [option.id for option in options[:replacement_count]]
+            for answer in answers:
+                valid_ids = {option.id for option in options}
+                choices = [answer.option_id] if question.type == "single_choice" else (answer.option_ids or [])
+                if not choices or any(item not in valid_ids for item in choices):
                     repaired += 1
-        db.commit()
-        print(f"Repaired answer option links: {repaired}")
+        print(f"Invalid answer links: {repaired}. Modified rows: 0. Restore only from a verified backup.")
     finally:
         db.close()
 

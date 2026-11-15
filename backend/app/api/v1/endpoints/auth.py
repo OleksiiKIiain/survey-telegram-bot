@@ -14,7 +14,7 @@ router = APIRouter()
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     admin = db.scalar(select(Admin).where(Admin.email == payload.email))
-    if not admin or not verify_password(payload.password, admin.hashed_password):
+    if not admin or not admin.is_active or not verify_password(payload.password, admin.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     return TokenResponse(access_token=create_access_token(admin.id))
 

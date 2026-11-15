@@ -65,8 +65,8 @@ export default function Analytics() {
           <section className="panel" key={question.question_id}>
             <h2 className="font-semibold">{questionTitle(question)}</h2>
             <div className="mb-2 text-sm text-slate-500">
-              {question.question_type} · {question.total_answers} {t('answers')}
-              {question.average ? ` · ${t('average')} ${question.average}` : ''}
+              {t(question.question_type)} · {question.total_answers} {t('answers')}
+              {question.average != null ? ` · ${t('average')} ${question.average}` : ''}
             </div>
             {question.distribution.length > 0 ? (
               <ResponsiveContainer width="100%" height={240}>

@@ -33,7 +33,7 @@ export default function SurveyDetails() {
       <p className="text-slate-600">{description}</p>
       <section className="space-y-3">{survey.questions?.map(q => (
         <div className="panel" key={q.id}>
-          <div className="flex justify-between"><h2 className="font-semibold">{q.position + 1}. {questionText(q)}</h2><span className="text-sm text-slate-500">{q.type}</span></div>
+          <div className="flex justify-between gap-3"><h2 className="font-semibold">{q.position + 1}. {questionText(q)}</h2><span className="text-sm text-slate-500">{t(q.type)}</span></div>
           {q.options?.length > 0 && <ul className="mt-2 list-disc pl-5 text-sm text-slate-600">{q.options.map(o => <li key={o.id}>{optionText(o)}</li>)}</ul>}
         </div>
       ))}</section>

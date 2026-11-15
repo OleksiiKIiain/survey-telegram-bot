@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-11-15T12:50:12.472Z",
+  "scope": "Real browser + isolated API/PostgreSQL",
+  "login": true,
+  "languageSwitch": true,
+  "pages": 6,
+  "translationPersistsAfterReload": true,
+  "createdUrl": "http://localhost:5174/surveys/20",
+  "mobileOverflow": false,
+  "errors": []
+}

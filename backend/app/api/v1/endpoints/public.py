@@ -89,13 +89,17 @@ def save_answer(session_id: int, payload: AnswerCreate, db: Session = Depends(ge
         raise HTTPException(status_code=422, detail="Invalid option")
     if question.type == "multiple_choice" and (not payload.option_ids or any(item not in option_ids for item in payload.option_ids)):
         raise HTTPException(status_code=422, detail="Invalid options")
-    if question.type == "free_text" and not payload.text_value:
+    if question.type == "free_text" and not (payload.text_value or "").strip():
         raise HTTPException(status_code=422, detail="Text answer is required")
-    if question.type == "scale" and (payload.number_value is None or payload.number_value < (question.scale_min or 1) or payload.number_value > (question.scale_max or 5)):
+    if question.type == "scale" and (payload.number_value is None or payload.number_value < (1 if question.scale_min is None else question.scale_min) or payload.number_value > (5 if question.scale_max is None else question.scale_max)):
         raise HTTPException(status_code=422, detail="Invalid scale value")
 
+    fields = {"single_choice": "option_id", "multiple_choice": "option_ids", "free_text": "text_value", "scale": "number_value"}
+    values = {fields[question.type]: getattr(payload, fields[question.type])}
+    if question.type == "multiple_choice":
+        values["option_ids"] = list(dict.fromkeys(payload.option_ids))
     db.query(Answer).filter(Answer.session_id == session_id, Answer.question_id == payload.question_id).delete()
-    db.add(Answer(session_id=session_id, **payload.model_dump()))
+    db.add(Answer(session_id=session_id, question_id=question.id, **values))
     db.commit()
     return {"status": "saved"}
 
@@ -105,8 +109,29 @@ def complete_session(session_id: int, db: Session = Depends(get_db)) -> SurveySe
     session = db.get(SurveySession, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session.status == "completed":
+        return session
+    if session.status != "in_progress":
+        raise HTTPException(status_code=409, detail="Session is not active")
+    required = set(db.scalars(select(Question.id).where(Question.survey_id == session.survey_id, Question.is_required.is_(True))).all())
+    answered = set(db.scalars(select(Answer.question_id).where(Answer.session_id == session.id)).all())
+    if required - answered:
+        raise HTTPException(status_code=422, detail="Required questions are unanswered")
     session.status = "completed"
     session.completed_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+@router.post("/sessions/{session_id}/cancel", response_model=SessionRead)
+def cancel_session(session_id: int, db: Session = Depends(get_db)) -> SurveySession:
+    session = db.get(SurveySession, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.status == "completed":
+        raise HTTPException(status_code=409, detail="Completed session cannot be cancelled")
+    session.status = "cancelled"
     db.commit()
     db.refresh(session)
     return session
