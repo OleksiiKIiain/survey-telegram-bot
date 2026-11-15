@@ -68,6 +68,8 @@ FSM зберігається у пам'яті; restart втрачає актив
 
 ## Відтворення перевірок
 
+Публікація повної гілки з текстом і зображеннями була зупинена перевіркою безпеки. Натомість опубліковано codex/survey-audit-fixes: лише код, тести й docs/audit.md, без магістерської, скриншотів і сирих даних. Основну main не змінено. GitHub-конектор повернув 403 під час створення PR; альтернативне використання збережених реквізитів не дозволено перевіркою безпеки. PR не вважається створеним. Адреса для його підготовки: https://github.com/OleksiiKIiain/survey-telegram-bot/compare/main...codex/survey-audit-fixes.
+
 ```powershell
 docker compose up -d --build
 docker compose exec db createdb -U survey_user survey_audit_20261115

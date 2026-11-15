@@ -22,7 +22,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import BaseDocTemplate, Frame, Image, KeepTogether, PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle, Preformatted
+from reportlab.platypus import BaseDocTemplate, CondPageBreak, Frame, Image, KeepTogether, PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle, Preformatted
 from reportlab.platypus.tableofcontents import TableOfContents
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -314,7 +314,7 @@ def make_pdf(tokens,target,cover=False):
         'caption':ParagraphStyle('caption',fontName='TNR',fontSize=12,leading=16,alignment=TA_CENTER,spaceAfter=10),
         'cover':ParagraphStyle('cover',fontName='TNR',fontSize=14,leading=22,alignment=TA_CENTER,spaceAfter=8),
         'code':ParagraphStyle('code',fontName='Code',fontSize=8,leading=10,spaceAfter=0),
-        'table_caption':ParagraphStyle('table_caption',fontName='TNR',fontSize=14,leading=21,spaceBefore=8,spaceAfter=4,keepWithNext=True),
+        'table_caption':ParagraphStyle('table_caption',fontName='TNR',fontSize=14,leading=21,spaceBefore=8,spaceAfter=4),
     }
     story=[]
     def para(text,style='p'):return Paragraph(html.escape(text),styles[style])
@@ -329,18 +329,28 @@ def make_pdf(tokens,target,cover=False):
         toc=TableOfContents();toc.levelStyles=[ParagraphStyle('TOC0',fontName='TNR',fontSize=12,leading=16,spaceBefore=4),ParagraphStyle('TOC1',fontName='TNR',fontSize=12,leading=16,leftIndent=12)]
         story.append(toc)
     first=True
+    pending_caption=None
     for kind,value in tokens:
         if kind.startswith('h'):
             if kind=='h1' and (not first or cover):story.append(PageBreak())
             story.append(para(value,kind))
-        elif kind=='p':story.append(para(value,'table_caption' if value.startswith('Таблиця ') else 'p'))
+        elif kind=='p':
+            if value.startswith('Таблиця '):pending_caption=value
+            else:story.append(para(value))
         elif kind=='table':
             cols=len(value[0]);widths=[WIDTH/cols]*cols
             if cols==2:widths=[WIDTH*0.3,WIDTH*0.7]
             rows=[[para(cell,'cell') for cell in row] for row in value]
             t=Table(rows,colWidths=widths,repeatRows=1,hAlign='LEFT')
             t.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#D9D9D9')),('BACKGROUND',(0,0),(-1,0),colors.HexColor('#E8E8E8')),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6),('LEFTPADDING',(0,0),(-1,-1),6),('RIGHTPADDING',(0,0),(-1,-1),6)]))
-            story.extend([Spacer(1,6),t,Spacer(1,10)])
+            if pending_caption:
+                caption=para(pending_caption,'table_caption')
+                first_rows=Table(rows[:2],colWidths=widths)
+                first_rows.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6)]))
+                minimum=caption.wrap(WIDTH,10000)[1]+first_rows.wrap(WIDTH,10000)[1]+20
+                story.extend([CondPageBreak(minimum),caption])
+                pending_caption=None
+            story.extend([t,Spacer(1,10)])
         elif kind=='image':
             caption,filename=value;image=SRC/filename
             if image.exists():
@@ -408,6 +418,10 @@ def main():
              'docx_rendered':False,'pdf_generation':'ReportLab from the same structured source; not a DOCX conversion','google_docs_updated':False,
              'limitations':['Official methodology and Appendix E inaccessible','Official personal details unconfirmed','DOCX rendering and automatic TOC refresh require a compatible renderer','No completed real Telegram client E2E','External translation returned 503']}
     (OUT/'build_summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
+    if (SRC/'completion-report.md').exists():
+        completion=(SRC/'completion-report.md').read_text(encoding='utf-8').replace('{{TOTAL_PAGES}}',str(summary['pdf_pages']))
+        for i,length in enumerate(chapter_lengths,1):completion=completion.replace('{{CH'+str(i)+'}}',str(length))
+        (OUT/'completion_report.md').write_text(completion,encoding='utf-8')
     print(json.dumps({k:v for k,v in summary.items() if k!='headings'},ensure_ascii=False,indent=2))
 
 
