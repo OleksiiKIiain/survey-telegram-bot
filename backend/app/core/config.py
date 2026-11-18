@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +13,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 720
     telegram_bot_token: str = ""
+    translation_provider: Literal["mymemory", "google"] = "mymemory"
     backend_cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173")
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")

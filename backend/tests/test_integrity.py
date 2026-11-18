@@ -109,6 +109,83 @@ class IntegrityTests(unittest.TestCase):
                 get_current_admin(self.db, token)
             self.assertEqual(ctx.exception.status_code, 401)
 
+    def test_multiple_translation_and_reorder_preserve_counts(self):
+        q = self.questions[1]
+        ids = [option.id for option in q.options]
+        save_answer(self.session_id, AnswerCreate(question_id=q.id, option_ids=ids), self.db)
+        before = build_analytics(self.db, self.survey.id).question_stats[1]
+        update_question(self.db, q, QuestionUpdate(options=[
+            {'id': oid, 'text': 'Edited', 'text_uk': 'Переклад', 'text_en': 'Translation', 'position': i}
+            for i, oid in enumerate(reversed(ids))]))
+        self.db.commit()
+        self.db.expire_all()
+        after = build_analytics(self.db, self.survey.id).question_stats[1]
+        answer = self.db.scalar(select(Answer).where(Answer.session_id == self.session_id))
+        self.assertEqual(answer.option_ids, ids)
+        self.assertEqual(before.total_answers, after.total_answers)
+        self.assertEqual([v['value'] for v in after.distribution], [1, 1])
+        self.assertEqual(set(option.id for option in self.db.get(type(q), q.id).options), set(ids))
+
+    def test_empty_and_whitespace_text_are_rejected(self):
+        for value in ['', ' ', '\n\t', None]:
+            with self.subTest(value=value), self.assertRaises(HTTPException) as ctx:
+                save_answer(self.session_id, AnswerCreate(question_id=self.questions[2].id, text_value=value), self.db)
+            self.assertEqual(ctx.exception.status_code, 422)
+
+    def test_empty_multiple_is_rejected(self):
+        for value in [[], None]:
+            with self.subTest(value=value), self.assertRaises(HTTPException) as ctx:
+                save_answer(self.session_id, AnswerCreate(question_id=self.questions[1].id, option_ids=value), self.db)
+            self.assertEqual(ctx.exception.status_code, 422)
+
+    def test_scale_boundaries(self):
+        q = self.questions[3]
+        for value in [-1, 6, None]:
+            with self.subTest(value=value), self.assertRaises(HTTPException) as ctx:
+                save_answer(self.session_id, AnswerCreate(question_id=q.id, number_value=value), self.db)
+            self.assertEqual(ctx.exception.status_code, 422)
+        for value in [0, 5]:
+            save_answer(self.session_id, AnswerCreate(question_id=q.id, number_value=value), self.db)
+            self.assertEqual(build_analytics(self.db, self.survey.id).question_stats[3].average, value)
+
+    def test_multiple_duplicates_are_normalized(self):
+        q = self.questions[1]
+        oid = q.options[0].id
+        save_answer(self.session_id, AnswerCreate(question_id=q.id, option_ids=[oid, oid]), self.db)
+        answer = self.db.scalar(select(Answer).where(Answer.session_id == self.session_id))
+        self.assertEqual(answer.option_ids, [oid])
+        self.assertEqual(build_analytics(self.db, self.survey.id).question_stats[1].distribution[0]['value'], 1)
+
+    def test_completion_is_idempotent(self):
+        self.answer_all()
+        first = complete_session(self.session_id, self.db).completed_at
+        second = complete_session(self.session_id, self.db).completed_at
+        self.assertEqual(first, second)
+        self.assertEqual(build_analytics(self.db, self.survey.id).completed_sessions, 1)
+
+    def test_completed_answer_is_immutable(self):
+        self.answer_all()
+        complete_session(self.session_id, self.db)
+        with self.assertRaises(HTTPException) as ctx:
+            save_answer(self.session_id, AnswerCreate(question_id=self.questions[3].id, number_value=3), self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+
+    def test_optional_unanswered_can_complete(self):
+        for q in self.questions:
+            q.is_required = False
+        self.db.commit()
+        self.assertEqual(complete_session(self.session_id, self.db).status, 'completed')
+
+    def test_date_and_survey_filters(self):
+        from datetime import datetime, timezone
+        self.answer_all()
+        stats = build_analytics(self.db, self.survey.id)
+        self.assertEqual(stats.total_respondents, 1)
+        future = build_analytics(self.db, self.survey.id, date_from=datetime.now(timezone.utc) + timedelta(days=1))
+        self.assertEqual(future.total_sessions, 0)
+        self.assertEqual(future.total_respondents, 0)
+        self.assertTrue(all(q.total_answers == 0 for q in future.question_stats))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

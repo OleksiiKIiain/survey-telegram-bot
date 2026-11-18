@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: survey_audit_reproduce
+      POSTGRES_USER: survey_user
+      POSTGRES_PASSWORD: survey_password
+    volumes:
+      - audit_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U survey_user -d survey_audit_reproduce"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://survey_user:survey_password@db:5432/survey_audit_reproduce
+      SECRET_KEY: isolated-audit-secret-not-for-production
+      TELEGRAM_BOT_TOKEN: "000000:isolated-audit-token"
+      TRANSLATION_PROVIDER: mymemory
+    ports:
+      - "127.0.0.1:8019:8000"
+    volumes:
+      - ./backend:/app:ro
+      - ./output/audit-reproduction:/evidence
+      - ./output/audit-reproduction/legacy-survey-schema.py:/tmp/legacy-survey-schema.py:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  bot-tests:
+    profiles: ["tests"]
+    build: ./bot
+    environment:
+      TELEGRAM_BOT_TOKEN: "000000:isolated-audit-token"
+      API_BASE_URL: http://backend:8000/api/v1
+    command: python -m unittest discover -s tests -v
+  frontend-tests:
+    profiles: ["tests"]
+    build: ./frontend
+    command: npm run build
+
+volumes:
+  audit_data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${AUDIT_SUBNET:-10.213.88.0/24}

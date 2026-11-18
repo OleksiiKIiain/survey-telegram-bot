@@ -1,0 +1,29 @@
+{
+  "timestamp_utc": "2026-11-18T21:47:31.726534+00:00",
+  "provider": "MyMemory",
+  "method": "Real authenticated POST /api/v1/translate; no mocks; generic test phrases only",
+  "results": [
+    {
+      "source": "en",
+      "target": "uk",
+      "text": "Survey about the quality of education",
+      "translated_text": "Опитування щодо якості освіти",
+      "http_status": 200
+    },
+    {
+      "source": "uk",
+      "target": "en",
+      "text": "Як ви оцінюєте якість навчання?",
+      "translated_text": "How would you rate the quality of teaching?",
+      "http_status": 200
+    },
+    {
+      "source": "uk",
+      "target": "en",
+      "text": "Так\n\nНі",
+      "translated_text": "Yes\n\nNo.",
+      "http_status": 200
+    }
+  ],
+  "boundary": "Confirms these requests and language directions, not general translation quality or availability."
+}
