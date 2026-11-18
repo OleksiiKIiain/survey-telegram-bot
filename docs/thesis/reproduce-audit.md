@@ -22,7 +22,7 @@ powershell -NoProfile -File scripts/reproduce_audit.ps1
 6. Окремий одноразовий контейнер бота: 18 unit-тестів, без реальних повідомлень.
 7. Окремий одноразовий frontend-контейнер: `npm run build`.
 
-Журнал усіх команд і результати: `output/audit-reproduction/commands.log`. Машиночитані протоколи: `supervisor-audit.json`, `repeat-load.json`, `backup-restore.json` у цій самій папці; HTTP-протокол друкується в журнал. Значення ID та часів можуть відрізнятися: перевіряти слід інваріанти, а не конкретні первинні ключі попереднього запуску.
+Журнал усіх команд і результати: `output/audit-reproduction/commands.log`. Машиночитані протоколи: `supervisor-audit.json`, `http-audit.json`, `repeat-load.json`, `backup-restore.json` у цій самій папці. Значення ID та часів можуть відрізнятися: перевіряти слід інваріанти, а не конкретні первинні ключі попереднього запуску.
 
 На виході тестові сервіси зупиняються через `down` без `-v`. Для огляду API після тестів використайте `-KeepRunning`, відкрийте `http://localhost:8019/docs`. Зупинка лише тестового середовища:
 

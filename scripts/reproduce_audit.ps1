@@ -22,8 +22,10 @@ function Invoke-AuditDocker([string[]]$Arguments) {
 try {
     Invoke-AuditDocker -Arguments @('up', '-d', '--build', '--wait', 'db', 'backend')
     Invoke-AuditDocker -Arguments @('exec', '-T', 'backend', 'python', '-m', 'tests.supervisor_audit')
+    Invoke-AuditDocker -Arguments @('exec', '-T', 'backend', 'python', '-c', "import shutil; shutil.copyfile('/tmp/supervisor-audit.json', '/evidence/supervisor-audit.json')")
     Invoke-AuditDocker -Arguments @('exec', '-T', 'backend', 'python', '-m', 'unittest', 'tests.test_translation', '-v')
     Invoke-AuditDocker -Arguments @('exec', '-T', 'backend', 'python', '-m', 'tests.http_audit')
+    Invoke-AuditDocker -Arguments @('exec', '-T', 'backend', 'python', '-c', "import shutil; shutil.copyfile('/tmp/http_audit.json', '/evidence/http-audit.json')")
     Invoke-AuditDocker -Arguments @('exec', '-T', 'backend', 'python', '-m', 'tests.repeat_load')
     $restore = 'survey_audit_restore_' + [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
     Invoke-AuditDocker -Arguments @('exec', '-T', 'db', 'pg_dump', '-U', 'survey_user', '-Fc', '-f', '/tmp/audit.dump', 'survey_audit_reproduce')
