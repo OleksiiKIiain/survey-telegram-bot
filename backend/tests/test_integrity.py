@@ -29,10 +29,10 @@ class IntegrityTests(unittest.TestCase):
             self.db.add(self.admin)
             self.db.flush()
         self.survey = create_survey(self.db, SurveyCreate(title='Audit', status='active', questions=[
-            QuestionCreate(text='Choice', text_en='Choice', text_uk='Вибір', type='single_choice', options=[{'text': 'A'}, {'text': 'B'}]),
-            QuestionCreate(text='Many', type='multiple_choice', options=[{'text': 'C'}, {'text': 'D'}]),
-            QuestionCreate(text='Text', type='free_text'),
-            QuestionCreate(text='Rating', type='scale', scale_min=0, scale_max=5),
+            QuestionCreate(text='Choice', text_en='Choice', text_uk='Вибір', type='single_choice', position=0, options=[{'text': 'A'}, {'text': 'B'}]),
+            QuestionCreate(text='Many', type='multiple_choice', position=1, options=[{'text': 'C'}, {'text': 'D'}]),
+            QuestionCreate(text='Text', type='free_text', position=2),
+            QuestionCreate(text='Rating', type='scale', position=3, scale_min=0, scale_max=5),
         ]), self.admin.id)
         self.user = TelegramUser(telegram_id=900000000000 + self.survey.id, first_name='Audit')
         self.db.add(self.user)

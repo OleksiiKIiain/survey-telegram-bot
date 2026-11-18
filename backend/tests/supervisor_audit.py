@@ -73,15 +73,16 @@ def controlled_edit():
 
         def snapshot():
             stats = build_analytics(db, survey.id)
+            by_question = {item.question_id: item for item in stats.question_stats}
             answers = db.scalars(select(Answer).where(Answer.session_id.in_(sessions)).order_by(Answer.id)).all()
             return {
                 'survey_id': survey.id, 'respondents': stats.total_respondents,
                 'completed': stats.completed_sessions, 'answers': len(answers),
                 'option_ids': [[o.id for o in q.options] for q in qs[:2]],
                 'answer_links': [{'id': a.id, 'question_id': a.question_id, 'option_id': a.option_id, 'option_ids': a.option_ids} for a in answers],
-                'frequencies': [[v['value'] for v in q.distribution] for q in stats.question_stats[:2]],
-                'rating_average': stats.question_stats[3].average,
-                'labels': [[v['name_en'] for v in q.distribution] for q in stats.question_stats[:2]],
+                'frequencies': [[v['value'] for v in by_question[q.id].distribution] for q in qs[:2]],
+                'rating_average': by_question[qs[3].id].average,
+                'labels': [[v['name_en'] for v in by_question[q.id].distribution] for q in qs[:2]],
             }
         before = snapshot()
         for q in qs[:2]:
