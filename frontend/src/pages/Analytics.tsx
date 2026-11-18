@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api } from '../api'
+import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useI18n } from '../i18n'
 import { AnalyticsOverview, Survey } from '../types'
 
@@ -8,19 +8,20 @@ type QuestionStat = AnalyticsOverview['question_stats'][number]
 
 export default function Analytics() {
   const { lang, t } = useI18n()
-  const [surveys, setSurveys] = useState<Survey[]>([])
-  const [surveyId, setSurveyId] = useState('')
-  const [data, setData] = useState<AnalyticsOverview | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const surveyId = searchParams.get('survey_id') || ''
+  const setSurveyId = (id: string) => setSearchParams(current => {
+    const next = new URLSearchParams(current)
+    if (id) next.set('survey_id', id)
+    else next.delete('survey_id')
+    return next
+  }, { replace: true })
+  const { data: surveys } = useLiveQuery<Survey[]>('/surveys')
+  const { data, error } = useLiveQuery<AnalyticsOverview>(
+    `/analytics/overview${surveyId ? `?survey_id=${surveyId}` : ''}`
+  )
 
-  useEffect(() => {
-    api.get('/surveys').then(response => setSurveys(response.data))
-  }, [])
-
-  useEffect(() => {
-    api.get('/analytics/overview', { params: surveyId ? { survey_id: surveyId } : {} }).then(response => setData(response.data))
-  }, [surveyId])
-
-  if (!data) return <div>{t('loading')}</div>
+  if (!data) return <div role="status">{t(error ? 'refreshError' : 'loading')}</div>
 
   const surveyTitle = (survey: Survey) => (
     lang === 'uk' ? survey.title_uk || survey.title : survey.title_en || survey.title
@@ -41,9 +42,11 @@ export default function Analytics() {
         <h1 className="text-2xl font-bold">{t('analytics')}</h1>
         <select className="input max-w-xs" value={surveyId} onChange={event => setSurveyId(event.target.value)}>
           <option value="">{t('allSurveys')}</option>
-          {surveys.map(survey => <option value={survey.id} key={survey.id}>{surveyTitle(survey)}</option>)}
+          {(surveys || []).map(survey => <option value={survey.id} key={survey.id}>{surveyTitle(survey)}</option>)}
         </select>
       </div>
+
+      {error && <p role="status" className="text-sm text-red-700">{t('refreshError')}</p>}
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="panel">

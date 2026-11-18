@@ -1,21 +1,22 @@
-import { useEffect, useState } from 'react'
-import { api } from '../api'
+import { useSearchParams } from 'react-router-dom'
+import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useI18n } from '../i18n'
 import { AnswerRow, Survey } from '../types'
 
 export default function Responses() {
   const { lang, t } = useI18n()
-  const [surveys, setSurveys] = useState<Survey[]>([])
-  const [surveyId, setSurveyId] = useState('')
-  const [answers, setAnswers] = useState<AnswerRow[]>([])
-
-  useEffect(() => {
-    api.get('/surveys').then(response => setSurveys(response.data))
-  }, [])
-
-  useEffect(() => {
-    api.get('/responses/answers', { params: surveyId ? { survey_id: surveyId } : {} }).then(response => setAnswers(response.data))
-  }, [surveyId])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const surveyId = searchParams.get('survey_id') || ''
+  const setSurveyId = (id: string) => setSearchParams(current => {
+    const next = new URLSearchParams(current)
+    if (id) next.set('survey_id', id)
+    else next.delete('survey_id')
+    return next
+  }, { replace: true })
+  const { data: surveys } = useLiveQuery<Survey[]>('/surveys')
+  const { data: answers, error } = useLiveQuery<AnswerRow[]>(
+    `/responses/answers${surveyId ? `?survey_id=${surveyId}` : ''}`
+  )
 
   const surveyTitle = (survey: Survey) => (
     lang === 'uk' ? survey.title_uk || survey.title : survey.title_en || survey.title
@@ -41,9 +42,12 @@ export default function Responses() {
         <h1 className="text-2xl font-bold">{t('responses')}</h1>
         <select className="input max-w-xs" value={surveyId} onChange={event => setSurveyId(event.target.value)}>
           <option value="">{t('allSurveys')}</option>
-          {surveys.map(survey => <option value={survey.id} key={survey.id}>{surveyTitle(survey)}</option>)}
+          {(surveys || []).map(survey => <option value={survey.id} key={survey.id}>{surveyTitle(survey)}</option>)}
         </select>
       </div>
+
+      {error && <p role="status" className="text-sm text-red-700">{t('refreshError')}</p>}
+      {!answers && !error && <p role="status">{t('loading')}</p>}
 
       <div className="panel overflow-auto">
         <table className="w-full text-sm">
@@ -56,7 +60,7 @@ export default function Responses() {
             </tr>
           </thead>
           <tbody>
-            {answers.map(answer => (
+            {(answers || []).map(answer => (
               <tr className="border-t" key={answer.id}>
                 <td className="py-2">#{answer.session_id}</td>
                 <td>{questionText(answer)}</td>

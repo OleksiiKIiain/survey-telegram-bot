@@ -1,20 +1,12 @@
-import { useEffect, useState } from 'react'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api } from '../api'
+import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useI18n } from '../i18n'
 import { AnalyticsOverview } from '../types'
 
 export default function Dashboard() {
   const { lang, t } = useI18n()
-  const [data, setData] = useState<AnalyticsOverview | null>(null)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    api.get('/analytics/overview')
-      .then(r => setData(r.data))
-      .catch(() => setError(t('loadingError')))
-  }, [t])
-  if (error) return <div className="panel text-red-700">{error}</div>
-  if (!data) return <div>{t('loading')}</div>
+  const { data, error } = useLiveQuery<AnalyticsOverview>('/analytics/overview')
+  if (!data) return <div role="status">{t(error ? 'refreshError' : 'loading')}</div>
   const sessionTitle = (session: AnalyticsOverview['recent_sessions'][number]) => (
     lang === 'uk' ? session.survey_title_uk || session.survey_title : session.survey_title_en || session.survey_title
   )
@@ -31,6 +23,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">{t('dashboard')}</h1>
+      {error && <p role="status" className="text-sm text-red-700">{t('refreshError')}</p>}
       <div className="grid gap-4 md:grid-cols-4">{cards.map(([label, value]) => (
         <div className="panel" key={label}><div className="text-sm text-slate-500">{label}</div><div className="mt-2 text-3xl font-bold">{value}</div></div>
       ))}</div>

@@ -80,6 +80,7 @@ const dictionaries: Record<Lang, Dict> = {
     recentSessions: 'Recent sessions',
     loading: 'Loading...',
     loadingError: 'Could not load data. Please sign in again.',
+    refreshError: 'Could not refresh data. Retrying...',
     answers: 'answers',
     average: 'avg',
   },
@@ -159,6 +160,7 @@ const dictionaries: Record<Lang, Dict> = {
     recentSessions: 'Останні проходження',
     loading: 'Завантаження...',
     loadingError: 'Не вдалося завантажити дані. Увійдіть ще раз.',
+    refreshError: 'Не вдалося оновити дані. Повторюємо спробу...',
     answers: 'відповідей',
     average: 'сер.',
   }
