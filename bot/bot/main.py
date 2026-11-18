@@ -11,7 +11,8 @@ from aiogram.types import CallbackQuery, Message
 from bot.api import api
 from bot.config import settings
 from bot.i18n import tr
-from bot.keyboards import language_keyboard, localized, multiple_choice_keyboard, scale_keyboard, single_choice_keyboard, surveys_keyboard
+from bot.keyboards import language_keyboard, localized, menu_keyboard, menu_labels, multiple_choice_keyboard, scale_keyboard, single_choice_keyboard, surveys_keyboard
+from bot.menu import set_chat_language, setup_menu
 
 logging.basicConfig(level=logging.INFO)
 router = Router()
@@ -36,7 +37,7 @@ async def ask_current(event: Message | CallbackQuery, state: FSMContext) -> None
         await api.complete(data["session_id"])
         await state.clear()
         await state.update_data(lang=lang)
-        await target.answer(tr(lang, "completed"))
+        await target.answer(tr(lang, "completed"), reply_markup=menu_keyboard(lang))
         return
 
     question = questions[index]
@@ -68,30 +69,69 @@ async def start(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     if data.get("session_id"):
         lang = data.get("lang")
-        await message.answer(tr(lang, "active_session", title=localized(data["survey"], "title", lang)))
+        await message.answer(tr(lang, "active_session", title=localized(data["survey"], "title", lang)), reply_markup=menu_keyboard(lang, active=True))
         return
     await state.clear()
     await api.upsert_user(message.from_user)
     await message.answer(tr(None, "choose_language"), reply_markup=language_keyboard())
 
 
+@router.message(Command("menu"))
+async def show_menu(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    active = bool(data.get("session_id"))
+    lang = data.get("lang")
+    await message.answer(tr(lang, "menu_active" if active else "menu_title"), reply_markup=menu_keyboard(lang, active))
+
+
+@router.message(Command("surveys"))
+@router.message(F.text.in_(menu_labels("menu_surveys")))
+async def list_surveys(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    lang = data.get("lang")
+    if data.get("session_id"):
+        await message.answer(tr(lang, "active_session", title=localized(data["survey"], "title", lang)), reply_markup=menu_keyboard(lang, active=True))
+        return
+    await api.upsert_user(message.from_user)
+    surveys = await api.surveys()
+    await message.answer(tr(lang, "menu_title"), reply_markup=menu_keyboard(lang))
+    if not surveys:
+        await message.answer(tr(lang, "no_surveys"))
+        return
+    await message.answer(tr(lang, "welcome"), reply_markup=surveys_keyboard(surveys, lang))
+
+
+@router.message(Command("language"))
+@router.message(F.text.in_(menu_labels("menu_language")))
+async def language_command(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    lang = data.get("lang")
+    if data.get("session_id"):
+        await message.answer(tr(lang, "active_session", title=localized(data["survey"], "title", lang)), reply_markup=menu_keyboard(lang, active=True))
+        return
+    await message.answer(tr(lang, "choose_language"), reply_markup=language_keyboard())
+
+
 @router.message(Command("help"))
+@router.message(F.text.in_(menu_labels("menu_help")))
 async def help_command(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
-    await message.answer(tr(data.get("lang"), "help"))
+    lang = data.get("lang")
+    await message.answer(tr(lang, "help"), reply_markup=menu_keyboard(lang, active=bool(data.get("session_id"))))
 
 
 @router.message(Command("cancel"))
+@router.message(F.text.in_(menu_labels("menu_cancel")))
 async def cancel(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     lang = data.get("lang")
     if not data.get("session_id"):
-        await message.answer(tr(lang, "nothing_to_cancel"))
+        await message.answer(tr(lang, "nothing_to_cancel"), reply_markup=menu_keyboard(lang))
         return
     await api.cancel(data["session_id"])
     await state.clear()
     await state.update_data(lang=lang)
-    await message.answer(tr(lang, "cancelled"))
+    await message.answer(tr(lang, "cancelled"), reply_markup=menu_keyboard(lang))
 
 
 @router.callback_query(F.data.startswith("lang:"))
@@ -102,9 +142,14 @@ async def choose_language(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.message.answer(tr(data.get("lang"), "active_session", title=localized(data["survey"], "title", data.get("lang"))))
         return
     lang = callback.data.split(":", 1)[1]
+    if lang not in ("uk", "en"):
+        await callback.answer()
+        return
     await state.update_data(lang=lang)
+    await set_chat_language(callback.bot, callback.message.chat.id, lang)
     await api.upsert_user(callback.from_user)
     surveys = await api.surveys()
+    await callback.message.answer(tr(lang, "menu_title"), reply_markup=menu_keyboard(lang))
     if not surveys:
         await callback.message.answer(tr(lang, "no_surveys"))
         await callback.answer(tr(lang, "language_saved"))
@@ -114,11 +159,12 @@ async def choose_language(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.message(Command("status"))
+@router.message(F.text.in_(menu_labels("menu_status")))
 async def status(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     lang = data.get("lang")
     if not data.get("session_id"):
-        await message.answer(tr(lang, "not_in_survey"))
+        await message.answer(tr(lang, "not_in_survey"), reply_markup=menu_keyboard(lang))
         return
     await message.answer(
         tr(
@@ -127,7 +173,8 @@ async def status(message: Message, state: FSMContext) -> None:
             title=localized(data["survey"], "title", lang),
             current=data["index"] + 1,
             total=len(data["survey"]["questions"]),
-        )
+        ),
+        reply_markup=menu_keyboard(lang, active=True),
     )
 
 
@@ -145,7 +192,7 @@ async def choose_survey(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(SurveyFlow.answering)
     await state.update_data(session_id=payload["session"]["id"], survey=payload["survey"], index=0, selected=[], lang=lang)
     await callback.answer()
-    await callback.message.answer(tr(lang, "starting", title=localized(payload["survey"], "title", lang)))
+    await callback.message.answer(tr(lang, "starting", title=localized(payload["survey"], "title", lang)), reply_markup=menu_keyboard(lang, active=True))
     await ask_current(callback, state)
 
 
@@ -189,6 +236,13 @@ async def multi_done(callback: CallbackQuery, state: FSMContext) -> None:
     await save_and_next(state, {"option_ids": selected}, callback)
 
 
+@router.message(F.text.startswith("/"))
+async def unknown_command(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    lang = data.get("lang")
+    await message.answer(tr(lang, "unknown_command"), reply_markup=menu_keyboard(lang, active=bool(data.get("session_id"))))
+
+
 @router.message(SurveyFlow.answering)
 async def text_answer(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
@@ -204,12 +258,18 @@ async def text_answer(message: Message, state: FSMContext) -> None:
     await save_and_next(state, {"text_value": text}, message)
 
 
+@router.message()
+async def idle_message(message: Message, state: FSMContext) -> None:
+    await show_menu(message, state)
+
+
 async def main() -> None:
     if not settings.telegram_bot_token or settings.telegram_bot_token.startswith("put-your"):
         logging.warning("TELEGRAM_BOT_TOKEN is not configured. Bot service is idle.")
         while True:
             await asyncio.sleep(3600)
     bot = Bot(token=settings.telegram_bot_token)
+    await setup_menu(bot)
     dp = Dispatcher(events_isolation=SimpleEventIsolation())
     dp.include_router(router)
     await dp.start_polling(bot)

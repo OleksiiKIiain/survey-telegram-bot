@@ -1,4 +1,25 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
+
+from bot.i18n import tr
+
+
+def menu_keyboard(lang: str | None, active: bool = False) -> ReplyKeyboardMarkup:
+    rows = [[KeyboardButton(text=tr(lang, "menu_status")), KeyboardButton(text=tr(lang, "menu_help"))]]
+    if active:
+        rows.append([KeyboardButton(text=tr(lang, "menu_cancel"))])
+    else:
+        rows.insert(0, [KeyboardButton(text=tr(lang, "menu_surveys"))])
+        rows.append([KeyboardButton(text=tr(lang, "menu_language"))])
+    return ReplyKeyboardMarkup(
+        keyboard=rows,
+        resize_keyboard=True,
+        is_persistent=True,
+        input_field_placeholder=tr(lang, "menu_placeholder"),
+    )
+
+
+def menu_labels(key: str) -> set[str]:
+    return {tr("uk", key), tr("en", key)}
 
 
 def language_keyboard() -> InlineKeyboardMarkup:
