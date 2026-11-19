@@ -1,0 +1,200 @@
+{
+  "verified_at": "2026-11-19T18:56:14.592Z",
+  "method": "Real Telegram user interaction; two admin pages opened before the session and polled the real API without reload",
+  "survey_id": 6,
+  "session_id": 27,
+  "added_answers": 4,
+  "before": {
+    "rows": 4,
+    "comment_count": 1,
+    "completed": 1,
+    "stats": [
+      {
+        "id": 23,
+        "total": 1,
+        "average": 4,
+        "distribution": [
+          {
+            "name": "1",
+            "value": 0
+          },
+          {
+            "name": "2",
+            "value": 0
+          },
+          {
+            "name": "3",
+            "value": 0
+          },
+          {
+            "name": "4",
+            "value": 1
+          },
+          {
+            "name": "5",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "total": 1,
+        "average": null,
+        "distribution": [
+          {
+            "name": "Через меню бота",
+            "name_en": "Using the bot menu",
+            "name_uk": "Через меню бота",
+            "value": 1
+          },
+          {
+            "name": "Командою /surveys",
+            "name_en": "Using /surveys",
+            "name_uk": "Командою /surveys",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": 25,
+        "total": 1,
+        "average": null,
+        "distribution": [
+          {
+            "name": "Telegram-бот",
+            "name_en": "Telegram bot",
+            "name_uk": "Telegram-бот",
+            "value": 1
+          },
+          {
+            "name": "Адмін-панель",
+            "name_en": "Admin panel",
+            "name_uk": "Адмін-панель",
+            "value": 1
+          },
+          {
+            "name": "Графіки",
+            "name_en": "Charts",
+            "name_uk": "Графіки",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "total": 1,
+        "average": null,
+        "distribution": []
+      }
+    ],
+    "identities": [
+      "f8216281-8112-4671-8cb0-e68f6c49a39b",
+      "90824ead-98f8-41ea-9773-eee4ddc98cba"
+    ]
+  },
+  "after": {
+    "rows": 8,
+    "completed": 2,
+    "stats": [
+      {
+        "id": 23,
+        "type": "scale",
+        "total": 2,
+        "average": 4,
+        "distribution": [
+          {
+            "name": "1",
+            "value": 0
+          },
+          {
+            "name": "2",
+            "value": 0
+          },
+          {
+            "name": "3",
+            "value": 0
+          },
+          {
+            "name": "4",
+            "value": 2
+          },
+          {
+            "name": "5",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "type": "single_choice",
+        "total": 2,
+        "average": null,
+        "distribution": [
+          {
+            "name": "Через меню бота",
+            "name_en": "Using the bot menu",
+            "name_uk": "Через меню бота",
+            "value": 2
+          },
+          {
+            "name": "Командою /surveys",
+            "name_en": "Using /surveys",
+            "name_uk": "Командою /surveys",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": 25,
+        "type": "multiple_choice",
+        "total": 2,
+        "average": null,
+        "distribution": [
+          {
+            "name": "Telegram-бот",
+            "name_en": "Telegram bot",
+            "name_uk": "Telegram-бот",
+            "value": 2
+          },
+          {
+            "name": "Адмін-панель",
+            "name_en": "Admin panel",
+            "name_uk": "Адмін-панель",
+            "value": 2
+          },
+          {
+            "name": "Графіки",
+            "name_en": "Charts",
+            "name_uk": "Графіки",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "type": "free_text",
+        "total": 2,
+        "average": null,
+        "distribution": []
+      }
+    ]
+  },
+  "comment": "Перевірка для магістерської 18.11",
+  "chartBars": 4,
+  "polls": {
+    "responses": 19,
+    "analytics": 19
+  },
+  "documents": {
+    "responses": 1,
+    "analytics": 1
+  },
+  "frame_events": {
+    "responses": 2,
+    "analytics": 2
+  },
+  "same_page_identities": true,
+  "filters_preserved": true,
+  "errors": [],
+  "boundary": "One controlled survey and one consenting account; not a load test or representative user study"
+}
